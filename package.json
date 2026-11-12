@@ -1,6 +1,6 @@
 {
   "name": "albumsmith",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.2",
   "description": "Self-hosted manager for rule-based smart albums on Flickr",
   "license": "MIT",
   "private": true,

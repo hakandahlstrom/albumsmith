@@ -3,6 +3,18 @@
 All notable changes to Albumsmith are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.0.0-rc.2] - 2026-11-12
+
+### Added
+
+- Screenshots in the README.
+
+### Changed
+
+- The container now stops within a second on SIGTERM or SIGINT, instead of being killed after the Docker timeout. A run in progress gets up to 8 seconds to finish.
+- "Export rules" takes you to the login page when your session has expired, instead of saving an error message as a file.
+- GitHub Actions workflows use the current major versions of all actions.
+
 ## [1.0.0-rc.1] - 2026-11-12
 
 First public release candidate.
