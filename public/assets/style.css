@@ -157,3 +157,5 @@ button.danger:hover { background: #fbeeec; border-color: #9b2c1c; }
   .topbar.open a:not(.brand) { display: block; }
   .topbar a.current { text-underline-offset: 4px; }
 }
+
+.tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

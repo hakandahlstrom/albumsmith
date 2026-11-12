@@ -37,10 +37,12 @@
   <p><button type="button" id="imp-apply" class="primary">Import</button> <button type="button" id="imp-cancel">Cancel</button></p>
 </div>
 <div id="msg">Loading...</div>
+<div class="tablewrap">
 <table>
   <thead><tr><th>Title</th><th>Type</th><th>Rule</th><th>Auto</th><th>Last run</th><th></th></tr></thead>
   <tbody id="rows"></tbody>
 </table>
+</div>
 <script>
   let rules = [];
   const rows = document.getElementById("rows");

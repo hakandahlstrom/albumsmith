@@ -21,10 +21,12 @@
   <button id="enable" disabled>Enable auto-sync for safe rules</button>
 </div>
 <div id="msg"></div>
+<div class="tablewrap">
 <table>
   <thead><tr><th>Title</th><th class="n">In album</th><th class="n">Found</th><th class="n">+ add</th><th class="n">- remove</th><th>Status</th></tr></thead>
   <tbody id="rows"></tbody>
 </table>
+</div>
 <script>
   const $ = (id) => document.getElementById(id);
   let safeKeys = [];
