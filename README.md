@@ -19,6 +19,20 @@ You describe an album with a rule (tags, a date range, "on this day", a sort ord
 - **Export, import and automatic backups** of your rules.
 - **Single owner, no accounts.** The first person to complete setup owns the instance.
 
+## Screenshots
+
+![Albums overview](docs/screenshots/albums.png)
+*Albums managed by Albumsmith are marked with a gold border and a label.*
+
+![Rules list](docs/screenshots/rules.png)
+*All rules in one place, with a status and a photo count per rule.*
+
+![Rule editor](docs/screenshots/rule-editor.png)
+*Each rule describes which photos belong in an album, with help texts for every field.*
+
+![Check all](docs/screenshots/check-all.png)
+*"Check all" compares every rule against Flickr without changing anything.*
+
 ## Requirements
 
 - Docker with Docker Compose
