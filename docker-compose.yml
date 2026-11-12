@@ -1,0 +1,17 @@
+name: albumsmith
+
+services:
+  albumsmith:
+    image: ghcr.io/hakandahlstrom/albumsmith:latest
+    # To build from source instead of pulling the image:
+    # build: .
+    container_name: albumsmith
+    restart: unless-stopped
+    ports:
+      - "${ALBUMSMITH_PORT:-8765}:3000"
+    env_file: .env
+    volumes:
+      # The container runs as uid/gid 1000. Create the folder first and give it
+      # to that user, otherwise Albumsmith cannot write to it:
+      #   mkdir -p data && sudo chown 1000:1000 data
+      - ./data:/data

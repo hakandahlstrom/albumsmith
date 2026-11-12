@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rule</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header>
+  <h1 id="h">New rule</h1>
+</header>
+
+<div class="formbox">
+
+  <div class="field">
+    <label for="title">Title</label>
+    <input id="title" type="text">
+    <p class="note">The name of the album on Flickr. If an album with this name already exists, it is reused.</p>
+  </div>
+
+  <div class="field">
+    <label for="desc">Description</label>
+    <textarea id="desc" rows="2"></textarea>
+    <p class="note">Optional text shown on the album's page on Flickr.</p>
+  </div>
+
+  <div id="std">
+    <div class="field">
+      <label for="tags">Tags</label>
+      <input id="tags" type="text">
+      <p class="note">Optional. Separate with commas, for example <code>architecture, berlin</code>.</p>
+    </div>
+
+    <div class="field">
+      <label for="tagMode">Tag match</label>
+      <select id="tagMode">
+        <option value="any">any of the tags</option>
+        <option value="all">all of the tags</option>
+      </select>
+      <p class="note">With several tags: "any" gives photos with at least one of them, "all" only photos that have every tag.</p>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="from">Taken from</label>
+        <div class="datewrap"><input id="from" class="dt" type="text" inputmode="numeric" maxlength="10" placeholder="YYYY-MM-DD" autocomplete="off"><input id="fromPick" class="pick" type="date" tabindex="-1" aria-hidden="true"><button type="button" class="cal" data-for="from" title="Pick from calendar" aria-label="Pick from calendar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button><button type="button" class="clr" data-for="from" title="Clear" aria-label="Clear date">&times;</button></div>
+      </div>
+      <div class="field">
+        <label for="to">Taken to</label>
+        <div class="datewrap"><input id="to" class="dt" type="text" inputmode="numeric" maxlength="10" placeholder="YYYY-MM-DD" autocomplete="off"><input id="toPick" class="pick" type="date" tabindex="-1" aria-hidden="true"><button type="button" class="cal" data-for="to" title="Pick from calendar" aria-label="Pick from calendar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button><button type="button" class="clr" data-for="to" title="Clear" aria-label="Clear date">&times;</button></div>
+      </div>
+    </div>
+    <div class="datebar">
+      <p class="note">Optional. Only photos taken within these dates are included. Leave both empty for no date limit.</p>
+      <button type="button" id="clrDates" hidden>Clear dates</button>
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="check"><input id="useOtd" type="checkbox"> On this day (same date every year)</label>
+    <p class="note">Collects photos taken on one calendar date, from every year. Tags and the date range above are ignored when this is on.</p>
+  </div>
+
+  <div id="otd" class="row">
+    <div class="field"><label for="month">Month</label><input id="month" type="number" min="1" max="12"></div>
+    <div class="field"><label for="day">Day</label><input id="day" type="number" min="1" max="31"></div>
+    <div class="field"><label for="yearStart">From year</label><input id="yearStart" type="number" min="1900" max="2100"></div>
+  </div>
+
+  <div class="field">
+    <label for="sort">Sort</label>
+    <select id="sort">
+      <option value="0">Interestingness, best first</option>
+      <option value="3">Date taken, oldest first</option>
+      <option value="4">Date taken, newest first</option>
+    </select>
+    <p class="note">The order of the photos in the album. An album holds at most 4500 photos. If more match, "newest first" keeps the newest 4500.</p>
+  </div>
+
+  <div class="actions">
+    <button id="save" type="button" class="primary">Save</button>
+    <button id="prev" type="button" title="Ask Flickr how many photos this rule matches">Count matching photos</button>
+    <button id="del" type="button" class="danger" hidden title="Remove this rule. The album on Flickr is not touched.">Delete rule</button>
+  </div>
+  <div id="out"></div>
+
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const key = new URLSearchParams(location.search).get("key");
+
+  const post = (url, method, body) => fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  function toggle() {
+    const on = $("useOtd").checked;
+    $("otd").style.display = on ? "flex" : "none";
+    $("std").style.display = on ? "none" : "block";
+  }
+  $("useOtd").addEventListener("change", toggle);
+
+  function collect() {
+    const on = $("useOtd").checked;
+    return {
+      title: $("title").value,
+      description: $("desc").value,
+      tags: on ? "" : $("tags").value,
+      tagMode: $("tagMode").value,
+      takenFrom: on ? "" : $("from").value,
+      takenTo: on ? "" : $("to").value,
+      onThisDay: on ? { month: $("month").value, day: $("day").value, yearStart: $("yearStart").value } : null,
+      sortCode: $("sort").value,
+    };
+  }
+
+  $("prev").addEventListener("click", async () => {
+    const bad = badDate();
+    if (bad) { $("out").textContent = bad; return; }
+    $("out").textContent = "Searching Flickr...";
+    const r = await post("/api/rules/preview", "POST", collect());
+    const d = await r.json().catch(() => ({}));
+    $("out").textContent = !r.ok ? "Error: " + (d.error || r.status)
+      : d.count + " photos match." + (d.capped ? " Flickr's search limit was reached, so there may be more. An album holds at most 4500 photos, in the chosen sort order." : "");
+  });
+
+  $("save").addEventListener("click", async () => {
+    const bad = badDate();
+    if (bad) { $("out").textContent = bad; return; }
+    $("out").textContent = "Saving...";
+    const r = await post(key ? "/api/rules/" + encodeURIComponent(key) : "/api/rules", key ? "PUT" : "POST", collect());
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) location.href = "/rules";
+    else $("out").textContent = "Error: " + (d.error || r.status);
+  });
+
+  $("del").addEventListener("click", async () => {
+    if (!confirm("Delete this rule?\n\nThe album on Flickr and its photos are not touched. Albumsmith just stops managing it.")) return;
+    $("out").textContent = "Deleting...";
+    const r = await post("/api/rules/" + encodeURIComponent(key), "DELETE", {});
+    if (r.ok) { location.href = "/rules"; return; }
+    const d = await r.json().catch(() => ({}));
+    $("out").textContent = "Error: " + (d.error || r.status);
+  });
+
+  async function load() {
+    if (!key) return;
+    $("h").textContent = "Edit rule";
+    $("del").hidden = false;
+    const r = await fetch("/api/rules/" + encodeURIComponent(key));
+    if (r.status === 401) { location.href = "/"; return; }
+    if (!r.ok) { $("out").textContent = "Rule not found"; return; }
+    const x = await r.json();
+    $("title").value = x.title || "";
+    $("desc").value = x.description || "";
+    $("tags").value = (x.tags || []).join(", ");
+    $("tagMode").value = x.tagMode || "any";
+    $("from").value = (x.taken && x.taken.from) || "";
+    $("to").value = (x.taken && x.taken.to) || "";
+    $("sort").value = String(x.sortCode ?? 0);
+    if (x.onThisDay) {
+      $("useOtd").checked = true;
+      $("month").value = x.onThisDay.month;
+      $("day").value = x.onThisDay.day;
+      $("yearStart").value = x.onThisDay.yearStart;
+    }
+    toggle();
+    sync();
+  }
+
+  function sync() {
+    for (const id of ["from", "to"]) $(id).classList.toggle("empty", !$(id).value);
+    $("clrDates").hidden = !($("from").value || $("to").value);
+  }
+  for (const id of ["from", "to"]) {
+    $(id).addEventListener("input", sync);
+    $(id).addEventListener("change", sync);
+  }
+  document.querySelectorAll(".clr").forEach((b) => b.addEventListener("click", () => {
+    $(b.dataset.for).value = "";
+    sync();
+  }));
+  $("clrDates").addEventListener("click", () => {
+    $("from").value = "";
+    $("to").value = "";
+    sync();
+  });
+  for (const id of ["from", "to"]) {
+    $(id).addEventListener("input", () => {
+      const d = $(id).value.replace(/\D/g, "").slice(0, 8);
+      $(id).value = d.slice(0, 4) + (d.length > 4 ? "-" + d.slice(4, 6) : "") + (d.length > 6 ? "-" + d.slice(6, 8) : "");
+    });
+  }
+  let openPick = null;
+  function closePick() {
+    if (openPick) { openPick.blur(); openPick = null; }
+  }
+  document.querySelectorAll(".cal").forEach((b) => b.addEventListener("click", () => {
+    const pick = $(b.dataset.for + "Pick");
+    if (openPick === pick) { closePick(); return; }
+    closePick();
+    pick.value = dateOk($(b.dataset.for).value) ? $(b.dataset.for).value : "";
+    pick.focus({ preventScroll: true });
+    openPick = pick;
+    try { pick.showPicker(); } catch (e) { pick.click(); }
+  }));
+  document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".cal")) closePick(); }, true);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePick(); });
+  for (const id of ["from", "to"]) {
+    $(id + "Pick").addEventListener("change", () => { $(id).value = $(id + "Pick").value; sync(); closePick(); });
+  }
+  function dateOk(v) {
+    if (v === "") return true;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    const d = new Date(v + "T00:00:00Z");
+    return !isNaN(d) && d.toISOString().slice(0, 10) === v;
+  }
+  function badDate() {
+    if ($("useOtd").checked) return "";
+    for (const [id, name] of [["from", "Taken from"], ["to", "Taken to"]]) {
+      if (!dateOk($(id).value)) return name + " must be a date like 2019-06-22, or empty.";
+    }
+    return "";
+  }
+  window.addEventListener("pageshow", sync);
+  sync();
+  load();
+</script>
+<script src="/assets/header.js"></script>
+</body>
+</html>

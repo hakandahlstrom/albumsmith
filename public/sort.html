@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sort albums</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header>
+  <h1>Sort albums</h1>
+</header>
+
+<details class="how">
+  <summary>How this page works</summary>
+  <p>Flickr keeps your albums in a custom order. Here you can put the whole list in order by title, by when the album was last updated, or by number of photos.</p>
+  <p>Choose an order and click <b>Show new order</b> to see the result. Nothing changes on Flickr until you click <b>Apply to Flickr</b>. Only the order of the album list changes. No photos or albums are touched.</p>
+  <p>An album counts as updated when photos are added to or removed from it. Collections are not handled yet.</p>
+</details>
+
+<div class="actions">
+  <select id="by">
+    <option value="title-asc">Title, A to Z</option>
+    <option value="title-desc">Title, Z to A</option>
+    <option value="updated-desc">Recently updated first</option>
+    <option value="updated-asc">Least recently updated first</option>
+    <option value="count-desc">Most photos first</option>
+    <option value="count-asc">Fewest photos first</option>
+  </select>
+  <button id="show" type="button">Show new order</button>
+  <button id="apply" type="button" class="primary" disabled>Apply to Flickr</button>
+</div>
+
+<p id="out" class="muted"></p>
+
+<table>
+  <thead><tr><th class="n">#</th><th>Album</th><th class="n">Photos</th><th>Updated</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let shown = null;
+  let total = 0;
+
+  function cell(text, cls) {
+    const td = document.createElement("td");
+    td.textContent = text;
+    if (cls) td.className = cls;
+    return td;
+  }
+
+  function reset() {
+    shown = null;
+    $("apply").disabled = true;
+    $("rows").textContent = "";
+    $("out").textContent = "";
+  }
+  $("by").addEventListener("change", reset);
+
+  $("show").addEventListener("click", async () => {
+    reset();
+    $("out").textContent = "Loading albums...";
+    const r = await fetch("/api/sort/preview?by=" + encodeURIComponent($("by").value));
+    if (r.status === 401) { location.href = "/"; return; }
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { $("out").textContent = "Error: " + (d.error || r.status); return; }
+    d.albums.forEach((a, i) => {
+      const tr = document.createElement("tr");
+      tr.append(cell(String(i + 1), "n"), cell(a.title), cell(String(a.count), "n"),
+        cell(new Date(a.updated * 1000).toLocaleDateString("sv-SE")));
+      $("rows").append(tr);
+    });
+    shown = $("by").value;
+    total = d.total;
+    $("out").textContent = d.moved
+      ? d.moved + " of " + d.total + " albums would change position."
+      : "The list already looks like this (" + d.total + " albums).";
+    $("apply").disabled = false;
+  });
+
+  $("apply").addEventListener("click", async () => {
+    if (!shown) return;
+    if (!confirm("Reorder all " + total + " albums on Flickr? Only their order changes.")) return;
+    $("apply").disabled = true;
+    $("out").textContent = "Sending the new order to Flickr...";
+    const r = await fetch("/api/sort/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ by: shown }),
+    });
+    const d = await r.json().catch(() => ({}));
+    $("out").textContent = r.ok
+      ? "Done. Flickr now has your " + d.total + " albums in this order."
+      : "Error: " + (d.error || r.status);
+    $("apply").disabled = false;
+  });
+</script>
+<script src="/assets/header.js"></script>
+</body>
+</html>

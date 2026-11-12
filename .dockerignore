@@ -1,0 +1,7 @@
+node_modules
+data
+bak
+.env
+.git
+*.bak*
+scripts

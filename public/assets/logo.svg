@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Albumsmith">
+  <rect width="128" height="128" rx="28" fill="#2b2b30"/>
+  <g transform="translate(-1,-4)">
+    <rect x="46" y="36" width="58" height="44" rx="7" fill="none" stroke="#8a5a1c" stroke-width="5"/>
+    <rect x="36" y="46" width="58" height="44" rx="7" fill="none" stroke="#c9a14a" stroke-width="5" opacity="0.7"/>
+    <rect x="26" y="56" width="58" height="44" rx="7" fill="#c9a14a"/>
+    <polygon points="33,92 47,74 56,84 62,77 77,92" fill="#2b2b30"/>
+    <circle cx="68" cy="67" r="4.5" fill="#2b2b30"/>
+  </g>
+</svg>

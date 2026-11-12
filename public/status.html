@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Status</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<script src="/assets/header.js"></script>
+<header><h1>Status</h1></header>
+<details class="how">
+  <summary>How this page works</summary>
+  <p>Albumsmith updates all albums with auto-sync once a night. This page shows how the latest run went and keeps a history of recent runs.</p>
+  <p><b>Needs attention</b> lists rules that failed or were skipped. A rule is skipped when it would remove many photos from an album, because Flickr's search is sometimes incomplete. If the change is intended, open <b>Rules</b> and use <b>Sync now</b> on that rule. Otherwise it is usually fine at the next run.</p>
+</details>
+<p id="summary" class="muted">Loading...</p>
+<div id="problems"></div>
+<h2>Run history</h2>
+<table>
+  <thead><tr><th>Started</th><th>Trigger</th><th>Rules</th><th>Updated</th><th>Errors</th><th>Skipped</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<p id="notify" class="muted"></p>
+<script>
+const el = (tag, text, cls) => {
+  const e = document.createElement(tag);
+  if (text !== undefined) e.textContent = text;
+  if (cls) e.className = cls;
+  return e;
+};
+const fmt = (s) => (s ? new Date(s).toLocaleString("sv-SE") : "-");
+const hint = (p) => {
+  if (p.skipped) return "Safety check: the album would have shrunk a lot, so it was left alone. If the change is intended, use Sync now on that rule.";
+  if (/incomplete results/i.test(p.error || "")) return "Flickr returned an incomplete search. It is retried at the next run.";
+  return "";
+};
+fetch("/api/status").then((r) => r.json()).then((d) => {
+  const hist = d.history || [];
+  const last = hist[0];
+  const sum = document.getElementById("summary");
+  if (!last) {
+    sum.textContent = "No run recorded yet. The next scheduled run is at " + d.syncTime + ".";
+  } else {
+    const bad = last.errors || last.skipped || last.error;
+    sum.className = bad ? "warn" : "ok";
+    sum.textContent = (bad ? "The last run had problems" : "The last run was OK") + " (" + fmt(last.finished || last.started) + "). Next scheduled run: " + d.syncTime + (d.running ? ". A run is in progress now." : ".");
+    const box = document.getElementById("problems");
+    if (last.error) box.append(el("p", last.error, "bad"));
+    if ((last.problems || []).length) {
+      box.append(el("h2", "Needs attention"));
+      const ul = el("ul");
+      for (const p of last.problems) {
+        const li = el("li");
+        li.append(el("strong", p.title), document.createTextNode(": " + (p.error || p.skipped)));
+        const h = hint(p);
+        if (h) li.append(el("div", h, "muted"));
+        ul.append(li);
+      }
+      box.append(ul);
+    }
+  }
+  const tb = document.getElementById("rows");
+  for (const r of hist) {
+    const tr = el("tr");
+    const cells = [fmt(r.started), r.trigger, r.rules, r.updated, r.errors, r.skipped];
+    cells.forEach((c, i) => tr.append(el("td", String(c), (i === 4 && r.errors) || (i === 5 && r.skipped) ? "bad" : "")));
+    tb.append(tr);
+  }
+  document.getElementById("notify").textContent = d.notify ? "Notifications: on" : "";
+});
+</script>
+</body>
+</html>

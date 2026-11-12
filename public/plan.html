@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check all</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<script src="/assets/header.js"></script>
+<header>
+  <h1>Check all rules against Flickr</h1>
+</header>
+<details class="how">
+  <summary>How this page works</summary>
+  <p>Compares what each rule finds on Flickr with the album that exists there today. The check itself changes nothing.</p>
+  <p>A rule is <b>safe</b> when turning on auto-sync would only add photos or leave the album as it is. Rules that would remove photos, or whose search hit Flickr's limit, are not safe and need a manual look first. Rules sorted newest first are the exception: they are searched year by year and keep the newest 4500 photos, so the album is capped on purpose.</p>
+</details>
+<div class="actions">
+  <button id="run" class="primary">Run check</button>
+  <button id="enable" disabled>Enable auto-sync for safe rules</button>
+</div>
+<div id="msg"></div>
+<table>
+  <thead><tr><th>Title</th><th class="n">In album</th><th class="n">Found</th><th class="n">+ add</th><th class="n">- remove</th><th>Status</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let safeKeys = [];
+  let todoKeys = [];
+  let autoOn = new Set();
+  let lastResult = null;
+  let timer = null;
+
+  const post = (url, body) => fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body || {}),
+  });
+
+  const base = (r) =>
+    r.error ? "error: " + r.error :
+    r.capped ? "search limit reached, not safe" :
+    r.toRemove ? "differs" :
+    r.toAdd ? "new photos only" :
+    r.orderOnly ? "order only" : "identical";
+  const status = (r) => (r.limited && !r.error ? base(r) + " (newest 4500)" : base(r));
+
+  const isSafe = (r) => !r.error && !r.capped && !r.toRemove;
+
+  function cell(text, cls) {
+    const td = document.createElement("td");
+    td.textContent = text;
+    if (cls) td.className = cls;
+    return td;
+  }
+
+  function render(result) {
+    lastResult = result;
+    const rows = (result ? result.results : []).slice().sort((a, b) => {
+      const s = (x) => (isSafe(x) ? 1 : 0);
+      return s(a) - s(b) || a.title.localeCompare(b.title, "sv");
+    });
+    safeKeys = rows.filter(isSafe).map((r) => r.key);
+    todoKeys = safeKeys.filter((k) => !autoOn.has(k));
+    $("rows").replaceChildren(...rows.map((r) => {
+      const tr = document.createElement("tr");
+      tr.append(cell(r.title), cell(r.inSet ?? "", "n"), cell(r.found ?? "", "n"), cell(r.toAdd ?? "", "n"), cell(r.toRemove ?? "", "n"), cell(status(r), isSafe(r) ? "" : "bad"));
+      return tr;
+    }));
+    $("enable").hidden = !todoKeys.length;
+    $("enable").textContent = "Enable auto-sync for " + todoKeys.length + " safe " + (todoKeys.length === 1 ? "rule" : "rules");
+    if (result) $("msg").textContent = "Finished " + new Date(result.finished).toLocaleString("sv-SE") + ". " + rows.length + " rules checked, " + safeKeys.length + " safe.";
+  }
+
+  async function loadAuto() {
+    try {
+      const r = await fetch("/api/rules");
+      if (r.ok) autoOn = new Set((await r.json()).rules.filter((x) => x.autoSync).map((x) => x.key));
+    } catch (e) {}
+  }
+
+  async function poll() {
+    const r = await fetch("/api/plan");
+    if (r.status === 401) { location.href = "/"; return; }
+    const d = await r.json();
+    if (d.state.running) {
+      $("msg").textContent = "Checking... " + d.state.done + " of " + d.state.total;
+      $("run").disabled = true;
+      timer = setTimeout(poll, 3000);
+    } else {
+      $("run").disabled = false;
+      await loadAuto();
+      render(d.result);
+    }
+  }
+
+  $("run").addEventListener("click", async () => {
+    const r = await post("/api/plan/start");
+    if (!r.ok && r.status !== 409) { $("msg").textContent = "Could not start"; return; }
+    clearTimeout(timer);
+    poll();
+  });
+
+  $("enable").addEventListener("click", async () => {
+    if (!confirm("Enable auto-sync for " + todoKeys.length + " rules?\n\nMake sure no other tool is managing these albums.")) return;
+    const r = await post("/api/rules/autosync-bulk", { keys: todoKeys });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) { await loadAuto(); render(lastResult); }
+    $("msg").textContent = r.ok ? "Enabled auto-sync for " + d.enabled + " rules." : "Error: " + (d.error || r.status);
+  });
+
+  poll();
+</script>
+</body>
+</html>

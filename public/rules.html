@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rules</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<script src="/assets/header.js"></script>
+<header>
+  <h1>Rules</h1>
+  <input id="q" type="search" placeholder="Search rules">
+  <label><input id="only" type="checkbox"> Auto-sync only</label>
+</header>
+<div id="banner" hidden></div>
+<details class="how">
+  <summary>How this page works</summary>
+  <p>Each rule describes one album on Flickr: which photos belong in it (by tags, dates or "on this day") and in what order. Click a title to edit the rule.</p>
+  <p>With <b>Auto</b> ticked, Albumsmith updates the album once a night. <b>Sync now</b> updates one album straight away. It is only available for rules with Auto ticked.</p>
+  <p><b>Last run</b> shows how many photos the rule found and whether the album was changed.</p>
+  <p>As a safety net, a nightly run will not remove more than 10% of an album's photos in one go (or more than 5 photos from a small album). A rule that would is skipped and listed under Status, since Flickr's search is sometimes incomplete. <b>Sync now</b> skips that check, because you are looking at the result yourself.</p>
+  <p>Use <b>Check all</b> to compare every rule with Flickr before you turn auto-sync on.</p>
+</details>
+<div class="actions">
+  <a class="btn" id="exp" href="/api/rules/export" download>Export rules</a>
+  <button type="button" id="imp" title="Load rules from a file made with Export">Import rules</button>
+  <input id="impfile" type="file" accept="application/json,.json" hidden>
+</div>
+<div id="imp-panel" class="importbox" hidden>
+  <p id="imp-sum"></p>
+  <p>
+    <label><input type="radio" name="impmode" value="merge" checked> Merge: add new rules and update existing ones, remove nothing</label><br>
+    <label><input type="radio" name="impmode" value="replace"> Replace: make the rules match the file exactly</label>
+  </p>
+  <p class="note">Rules are matched by album, so import only makes sense for the same Flickr account. A backup of the current rules is saved first.</p>
+  <p><button type="button" id="imp-apply" class="primary">Import</button> <button type="button" id="imp-cancel">Cancel</button></p>
+</div>
+<div id="msg">Loading...</div>
+<table>
+  <thead><tr><th>Title</th><th>Type</th><th>Rule</th><th>Auto</th><th>Last run</th><th></th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<script>
+  let rules = [];
+  const rows = document.getElementById("rows");
+  const q = document.getElementById("q");
+  const only = document.getElementById("only");
+  const msg = document.getElementById("msg");
+
+  const post = (url, body) => fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body || {}),
+  });
+
+  const lastText = (l, hasAlbum = true) =>
+    !l ? (hasAlbum ? "" : "No album yet. It is created when the rule first finds photos.") :
+    l.error ? "error: " + l.error :
+    l.skipped ? "skipped: " + l.skipped :
+    !hasAlbum && l.search === 0 ? "No matching photos. The album will be created when there are any." :
+    l.search + " found, " + (l.applied ? "updated" : l.changed ? "changed, not applied" : "up to date");
+
+  function cell(text, cls) {
+    const td = document.createElement("td");
+    td.textContent = text;
+    if (cls) td.className = cls;
+    return td;
+  }
+
+  function row(r) {
+    const tr = document.createElement("tr");
+    const auto = document.createElement("td");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = r.autoSync;
+    cb.addEventListener("change", async () => {
+      if (cb.checked && r.setId && !confirm("Enable auto-sync for " + r.title + "?\n\nMake sure no other tool is managing this album, or the two will overwrite each other.")) {
+        cb.checked = false;
+        return;
+      }
+      const res = await post("/api/rules/" + encodeURIComponent(r.key) + "/autosync", { enabled: cb.checked });
+      if (res.ok) { r.autoSync = cb.checked; render(); }
+      else { cb.checked = !cb.checked; alert("Could not save"); }
+    });
+    auto.append(cb);
+
+    const last = cell(lastText(r.last, Boolean(r.setId)));
+    const btn = document.createElement("button");
+    btn.textContent = "Sync now";
+    btn.disabled = !r.autoSync;
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      last.textContent = "Syncing...";
+      const res = await post("/api/rules/" + encodeURIComponent(r.key) + "/sync");
+      const out = await res.json().catch(() => ({}));
+      const x = out.results && out.results[0];
+      last.textContent = out.error ? "error: " + out.error : x ? lastText(x, Boolean(r.setId)) : "nothing to do";
+      btn.disabled = !r.autoSync;
+    });
+    const act = document.createElement("td");
+    act.append(btn);
+
+    const t = document.createElement("td");
+    const link = document.createElement("a");
+    link.href = "/rule?key=" + encodeURIComponent(r.key);
+    link.textContent = r.title;
+    t.append(link);
+    tr.append(t, cell(r.kind), cell(r.summary, "sum"), auto, last, act);
+    return tr;
+  }
+
+  function render() {
+    const term = q.value.toLowerCase();
+    const list = rules.filter((r) => (!only.checked || r.autoSync) && r.title.toLowerCase().includes(term));
+    msg.textContent = list.length + " of " + rules.length + " rules";
+    rows.replaceChildren(...list.map(row));
+  }
+
+  async function load() {
+    const r = await fetch("/api/rules");
+    if (r.status === 401) { location.href = "/"; return; }
+    const d = await r.json();
+    rules = d.rules.sort((a, b) => a.title.localeCompare(b.title, "sv"));
+    render();
+  }
+
+  const E = (id) => document.getElementById(id);
+  let impData = null;
+  const modeOf = () => document.querySelector('input[name="impmode"]:checked').value;
+  async function impRun(apply) {
+    const res = await post("/api/rules/import", { data: impData, mode: modeOf(), apply });
+    const d = await res.json().catch(() => ({}));
+    return { ok: res.ok, d };
+  }
+  async function impPreview() {
+    const { ok, d } = await impRun(false);
+    const sum = E("imp-sum");
+    if (!ok) { sum.textContent = "Error: " + (d.error || "could not read the file"); E("imp-apply").disabled = true; return; }
+    let t = d.total + " rules in the file: " + d.added + " new, " + d.changed + " changed, " + d.unchanged + " unchanged.";
+    if (modeOf() === "replace") t += " " + d.removed + " current rules would be removed.";
+    if (d.invalidCount) t += " " + d.invalidCount + " rules are not valid (" + d.invalid.map((x) => "#" + x.index + " " + x.title + ": " + x.error).join("; ") + "). Nothing can be imported until the file is fixed.";
+    sum.textContent = t;
+    E("imp-apply").disabled = Boolean(d.invalidCount);
+    E("imp-apply").dataset.removed = d.removed;
+  }
+  E("imp").addEventListener("click", () => E("impfile").click());
+  E("impfile").addEventListener("change", async (ev) => {
+    const f = ev.target.files[0];
+    ev.target.value = "";
+    if (!f) return;
+    try { impData = JSON.parse(await f.text()); } catch (e) { alert("That file is not valid JSON."); return; }
+    E("imp-panel").hidden = false;
+    document.querySelector('input[name="impmode"][value="merge"]').checked = true;
+    await impPreview();
+  });
+  document.querySelectorAll('input[name="impmode"]').forEach((r) => r.addEventListener("change", impPreview));
+  E("imp-cancel").addEventListener("click", () => { E("imp-panel").hidden = true; impData = null; });
+  E("imp-apply").addEventListener("click", async () => {
+    if (modeOf() === "replace" && !confirm("Replace all rules with the ones in the file?\n\n" + E("imp-apply").dataset.removed + " current rules will be removed. A backup of the current rules is saved first.")) return;
+    E("imp-apply").disabled = true;
+    const { ok, d } = await impRun(true);
+    if (ok) location.reload();
+    else E("imp-sum").textContent = "Error: " + (d.error || "import failed");
+  });
+
+  q.addEventListener("input", render);
+  only.addEventListener("change", render);
+  load();
+</script>
+<script>
+  fetch("/api/status").then((r) => r.json()).then((d) => {
+    const last = (d.history || [])[0];
+    if (!last || !(last.errors || last.skipped || last.error)) return;
+    const b = document.getElementById("banner");
+    b.textContent = "The last run had problems (" + last.errors + " errors, " + last.skipped + " skipped). ";
+    const a = document.createElement("a");
+    a.href = "/status";
+    a.textContent = "See details";
+    b.append(a);
+    b.hidden = false;
+  }).catch(() => {});
+</script>
+</body>
+</html>

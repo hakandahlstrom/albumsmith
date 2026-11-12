@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Albums</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<script src="/assets/header.js"></script>
+<header>
+  <h1>Albums</h1>
+  <input id="q" type="search" placeholder="Search albums">
+  <select id="sort">
+    <option value="title">Title (A-Z)</option>
+    <option value="count">Most photos</option>
+    <option value="created">Newest created</option>
+    <option value="updated">Recently updated</option>
+  </select>
+  <select id="show">
+    <option value="all">All albums</option>
+    <option value="managed">Managed only</option>
+    <option value="manual">Not managed</option>
+  </select>
+</header>
+<details class="how">
+  <summary>How this page works</summary>
+  <p>This shows all your albums on Flickr, including albums that are not managed by a rule. Click an album to open it on Flickr in a new tab.</p>
+  <p>Albums with a gold frame and the label <b>Managed by Albumsmith</b> are kept up to date by a rule. All your other albums are left exactly as they are. Use the second box above to show only one kind.</p>
+  <p>Search and the sort box above only change how albums are shown on this page. To change the order of your albums on Flickr, use <b>Sort albums</b>.</p>
+</details>
+<section id="start" class="start" hidden>
+  <h2>Create your first managed album</h2>
+  <p>Below are all the albums you already have on Flickr. Albumsmith does not change any of them. It only fills and updates albums that it creates for a <b>rule</b>, and those are marked with a gold frame and the label <b>Managed by Albumsmith</b>.</p>
+  <ol>
+    <li>Click <b>New rule</b> and give the album a name.</li>
+    <li>Describe which photos belong in it, for example a tag, a camera or a date range.</li>
+    <li>Use <b>Count matching photos</b> to check the result, then save the rule.</li>
+    <li>Run it from the <b>Rules</b> page with <b>Sync now</b>. Use <b>Check all</b> if you want to review the changes first.</li>
+  </ol>
+  <p><a class="btn primary" href="/rule">New rule</a></p>
+</section>
+<div id="msg">Loading...</div>
+<div id="grid"></div>
+<script>
+  const decode = (h) => new DOMParser().parseFromString(h || "", "text/html").body.textContent.trim();
+  const grid = document.getElementById("grid");
+  const q = document.getElementById("q");
+  const sort = document.getElementById("sort");
+  const msg = document.getElementById("msg");
+  const show = document.getElementById("show");
+  let sets = [];
+  let managed = new Set();
+  let rulesLoaded = false;
+  const start = document.getElementById("start");
+
+  function card(s) {
+    const el = document.createElement("a");
+    el.className = "card";
+    el.href = s.url;
+    el.target = "_blank";
+    el.rel = "noopener noreferrer";
+    const img = document.createElement("img");
+    img.src = s.thumb;
+    img.loading = "lazy";
+    img.alt = "";
+    const t = document.createElement("div");
+    t.className = "t";
+    const b = document.createElement("b");
+    b.textContent = s.title;
+    b.title = s.title;
+    const small = document.createElement("small");
+    small.textContent = s.count + (s.count === 1 ? " photo" : " photos");
+    t.append(b, small);
+    el.append(img, t);
+    if (managed.has(String(s.id))) {
+      el.classList.add("managed");
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = "Managed by Albumsmith";
+      el.append(tag);
+    }
+    return el;
+  }
+
+  function render() {
+    const term = q.value.toLowerCase();
+    const by = sort.value;
+    const sh = show.value;
+    const list = sets.filter((s) => s.title.toLowerCase().includes(term) &&
+      (sh === "all" || (sh === "managed") === managed.has(String(s.id))));
+    list.sort((a, b) =>
+      by === "title" ? a.title.localeCompare(b.title, "sv") :
+      by === "count" ? b.count - a.count : b[by] - a[by]
+    );
+    const nm = list.filter((s) => managed.has(String(s.id))).length;
+    msg.textContent = list.length + " of " + sets.length + " albums: " + nm + " managed, " + (list.length - nm) + " not managed";
+    grid.replaceChildren(...list.map(card));
+  }
+
+  async function load() {
+    const r = await fetch("/api/photosets");
+    if (r.status === 401) { location.href = "/"; return; }
+    if (!r.ok) { msg.textContent = "Error: " + (await r.text()); return; }
+    const data = await r.json();
+    try {
+      const rr = await fetch("/api/rules");
+      if (rr.ok) managed = new Set((await rr.json()).rules.map((x) => String(x.setId)).filter((x) => x && x !== "undefined")), rulesLoaded = true;
+    } catch (e) {}
+    start.hidden = !(rulesLoaded && managed.size === 0);
+    sets = data.sets.map((s) => ({ ...s, title: decode(s.title), description: decode(s.description) }));
+    render();
+  }
+
+  q.addEventListener("input", render);
+  sort.addEventListener("change", render);
+  show.addEventListener("change", render);
+  load();
+</script>
+</body>
+</html>
