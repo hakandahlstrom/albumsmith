@@ -147,3 +147,13 @@ button.danger:hover { background: #fbeeec; border-color: #9b2c1c; }
 .importbox { background: var(--gold-wash); border: 1px solid var(--gold-line); border-radius: 10px; padding: 12px 20px; margin-bottom: 16px; }
 .importbox[hidden] { display: none; }
 .importbox p { margin: 6px 0; }
+
+.topbar .menu-toggle { display: none; margin-left: auto; padding: 4px 12px; background: transparent; color: #e8dfd2; border: 1px solid #5a5a5e; border-radius: 6px; font-size: 1.2rem; line-height: 1; cursor: pointer; }
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; padding: 9px 16px; }
+  .topbar .brand { margin-right: 0; }
+  .topbar .menu-toggle { display: block; }
+  .topbar a:not(.brand) { display: none; width: 100%; padding: 10px 0; border-top: 1px solid #44444a; }
+  .topbar.open a:not(.brand) { display: block; }
+  .topbar a.current { text-underline-offset: 4px; }
+}

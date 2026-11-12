@@ -9,6 +9,17 @@
   smith.textContent = "smith";
   brand.append("Album", smith);
   bar.append(brand);
+  var toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "menu-toggle";
+  toggle.setAttribute("aria-label", "Menu");
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.textContent = "\u2630";
+  toggle.addEventListener("click", function () {
+    var open = bar.classList.toggle("open");
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  bar.append(toggle);
   var path = location.pathname.replace(/\/$/, "") || "/";
   links.forEach(function (l) {
     var a = document.createElement("a");
