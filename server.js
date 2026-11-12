@@ -1029,4 +1029,24 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = Number(process.env.PORT || 3000);
-app.listen(PORT, () => console.log(`Albumsmith ${VERSION} listening on :${PORT}`));
+const server = app.listen(PORT, () => console.log(`Albumsmith ${VERSION} listening on :${PORT}`));
+
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] ${signal} received, stopping`);
+  server.close();
+  server.closeIdleConnections();
+  const started = Date.now();
+  const check = setInterval(() => {
+    const busy = running || planState.running;
+    if (!busy || Date.now() - started > 8000) {
+      if (busy) console.log("[shutdown] a run was still in progress and was interrupted");
+      clearInterval(check);
+      process.exit(0);
+    }
+  }, 200);
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
