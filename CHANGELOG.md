@@ -3,6 +3,13 @@
 All notable changes to Albumsmith are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.0.0-rc.3] - 2026-11-12
+
+### Changed
+
+- On small screens the menu collapses into a button that opens the list of pages.
+- On small screens wide tables scroll sideways inside their own box instead of making the whole page wider.
+
 ## [1.0.0-rc.2] - 2026-11-12
 
 ### Added
