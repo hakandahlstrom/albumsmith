@@ -28,7 +28,7 @@ First public release candidate.
 
 ### Added
 
-- Rule-based Flickr albums: tags (any or all), taken-date range, "on this day", sort order, primary photo with optional lock.
+- Rule-based Flickr albums: tags (any or all), taken-date range, "on this day", sort order.
 - "Check all" preview of what each rule would add or remove.
 - Nightly sync with a safety check that leaves an album alone if it would shrink a lot.
 - Albums page with managed and not-managed filter and a gold frame on managed albums.

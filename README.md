@@ -10,7 +10,6 @@ You describe an album with a rule (tags, a date range, "on this day", a sort ord
 
 - **Rules instead of manual albums.** Match photos by tags (any or all), taken-date range, or a day of the year across several years ("on this day").
 - **Sort order.** Interestingness, date taken (oldest first) or date taken (newest first). The order is applied to the album each time it is synced.
-- **Primary photo.** Pick the album cover, and optionally lock it so syncs never change it.
 - **Preview before you change anything.** "Check all" shows what each rule would add or remove, without touching Flickr.
 - **Nightly sync.** Albums with Auto switched on are synced once a night at a time you choose.
 - **Safety check.** If a nightly run would shrink an album a lot (more than 10% and more than 5 photos), that album is left alone and flagged on the Status page.
