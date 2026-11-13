@@ -3,6 +3,10 @@
 All notable changes to Albumsmith are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] - 2026-11-13
+
+First stable release. There are no functional changes since 1.0.0-rc.3. The README no longer mentions primary photo, which is not available in the interface yet.
+
 ## [1.0.0-rc.3] - 2026-11-12
 
 ### Changed
