@@ -2,13 +2,13 @@
 
 Self-hosted manager for rule-based "smart" albums on Flickr.
 
-You describe an album with a rule (tags, a date range, "on this day", a sort order) and Albumsmith keeps the matching Flickr album up to date, every night or whenever you ask it to. It runs as one small container, stores everything in a single data folder, and talks to Flickr with your own API key.
+You describe an album with a rule (tags, a date range, "on this day", who can see the photos, a sort order) and Albumsmith keeps the matching Flickr album up to date, every night or whenever you ask it to. It runs as one small container, stores everything in a single data folder, and talks to Flickr with your own API key.
 
 > This product uses the Flickr API but is not endorsed or certified by SmugMug, Inc.
 
 ## Features
 
-- **Rules instead of manual albums.** Match photos by tags (any or all), taken-date range, or a day of the year across several years ("on this day").
+- **Rules instead of manual albums.** Match photos by tags (any or all), taken-date range, or a day of the year across several years ("on this day"). You can also limit a rule to photos with a given Flickr visibility (public, friends only, family only, friends and family, or private), on its own or together with the other criteria.
 - **Sort order.** Interestingness, date taken (oldest first) or date taken (newest first). The order is applied to the album each time it is synced.
 - **Preview before you change anything.** "Check all" shows what each rule would add or remove, without touching Flickr.
 - **Nightly sync.** Albums with Auto switched on are synced once a night at a time you choose.

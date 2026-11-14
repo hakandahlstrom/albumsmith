@@ -3,6 +3,12 @@
 All notable changes to Albumsmith are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-11-14
+
+### Added
+
+- Filter by visibility. A rule can now match only photos with a given Flickr privacy setting (public, friends only, family only, friends and family, or private), on its own or together with tags and dates. The setting is included in export and import.
+
 ## [1.0.0] - 2026-11-13
 
 First stable release. There are no functional changes since 1.0.0-rc.3. The README no longer mentions primary photo, which is not available in the interface yet.

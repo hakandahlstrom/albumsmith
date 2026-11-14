@@ -260,6 +260,8 @@ const saveToken = (u) => {
 const RULES_FILE = `${DATA_DIR}/rules.json`;
 const loadRules = () => (fs.existsSync(RULES_FILE) ? JSON.parse(fs.readFileSync(RULES_FILE, "utf8")) : []);
 const SORTS = { 0: "interestingness-desc", 3: "date-taken-asc", 4: "date-taken-desc" };
+const PRIVACY = { 1: "public", 2: "friends", 3: "family", 4: "friends and family", 5: "private" };
+const privacyOf = (v) => (PRIVACY[Number(v)] ? Number(v) : 0);
 const SET_MAX = 4500; // Flickr sets hold at most 4500 photos
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -292,6 +294,7 @@ async function ruleIds(sess, rule, sortOverride) {
     base.tags = rule.tags.join(",");
     base.tag_mode = rule.tagMode;
   }
+  if (rule.privacy) base.privacy_filter = String(rule.privacy);
   if (rule.onThisDay) {
     const { month, day, yearStart, yearEnd } = rule.onThisDay;
     const last = yearEnd || new Date().getFullYear();
@@ -626,11 +629,13 @@ const kindOf = (r) =>
   r.onThisDay ? "On this day"
   : r.tags.length && r.taken ? "Tags + dates"
   : r.tags.length ? "Tags"
-  : r.taken ? "Dates" : "Manual";
+  : r.taken ? "Dates"
+  : r.privacy ? "Visibility" : "Manual";
 
 const describe = (r) => {
   const parts = [];
   if (r.tags.length) parts.push(`tags (${r.tagMode}): ${r.tags.join(", ")}`);
+  if (r.privacy) parts.push(`visible to: ${PRIVACY[r.privacy]}`);
   if (r.taken) parts.push(`taken ${r.taken.from || "..."} to ${r.taken.to || "open"}`);
   if (r.onThisDay) parts.push(`${r.onThisDay.month}/${r.onThisDay.day} each year from ${r.onThisDay.yearStart}`);
   parts.push(`sort: ${SORTS[r.sortCode] || "interestingness-desc"}`);
@@ -686,6 +691,7 @@ const importRule = (r) => {
     takenTo: t.to || "",
     onThisDay: r.onThisDay,
     sortCode: r.sortCode,
+    privacy: r.privacy,
   });
   if (n.error) return { error: n.error };
   const rule = { ...n.rule };
@@ -703,7 +709,8 @@ const ruleSig = (r) => {
   const o = r.onThisDay ? [Number(r.onThisDay.month), Number(r.onThisDay.day), Number(r.onThisDay.yearStart)] : null;
   return JSON.stringify([r.title, r.description || "", r.tags || [], r.tagMode === "all" ? "all" : "any", t, o,
     Number(r.sortCode), Boolean(r.autoSync), r.id ? String(r.id) : null,
-    r.primaryPhotoId ? String(r.primaryPhotoId) : null, Boolean(r.lockPrimary)]);
+    r.primaryPhotoId ? String(r.primaryPhotoId) : null, Boolean(r.lockPrimary),
+    ...(r.privacy ? [Number(r.privacy)] : [])]);
 };
 
 app.get("/api/rules/export", requireAuth, (req, res) => {
@@ -775,8 +782,8 @@ const normRule = (b) => {
       return { error: "Check month, day and year" };
     if (tags.length || from || to) return { error: "On this day cannot be combined with tags or dates" };
     onThisDay = { month, day, yearStart };
-  } else if (!tags.length && !from && !to) {
-    return { error: "Add tags or a date range, otherwise the rule matches everything" };
+  } else if (!tags.length && !from && !to && !privacyOf(b.privacy)) {
+    return { error: "Add tags, a date range or a visibility level, otherwise the rule matches everything" };
   }
   return {
     rule: {
@@ -787,6 +794,7 @@ const normRule = (b) => {
       taken: from || to ? { from: from || null, to: to || null } : null,
       onThisDay,
       sortCode: Number(b.sortCode),
+      ...(privacyOf(b.privacy) ? { privacy: privacyOf(b.privacy) } : {}),
     },
   };
 };

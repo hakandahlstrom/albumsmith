@@ -41,6 +41,19 @@
       <p class="note">With several tags: "any" gives photos with at least one of them, "all" only photos that have every tag.</p>
     </div>
 
+    <div class="field">
+      <label for="privacy">Visible to</label>
+      <select id="privacy">
+        <option value="">anyone (no filter)</option>
+        <option value="1">public</option>
+        <option value="2">friends only</option>
+        <option value="3">family only</option>
+        <option value="4">friends and family</option>
+        <option value="5">private (only you)</option>
+      </select>
+      <p class="note">Optional. Only picks photos with exactly this Flickr privacy setting. "Friends only" does not include family. Can be used on its own or together with tags and dates.</p>
+    </div>
+
     <div class="row">
       <div class="field">
         <label for="from">Taken from</label>
@@ -111,6 +124,7 @@
       description: $("desc").value,
       tags: on ? "" : $("tags").value,
       tagMode: $("tagMode").value,
+      privacy: $("privacy").value,
       takenFrom: on ? "" : $("from").value,
       takenTo: on ? "" : $("to").value,
       onThisDay: on ? { month: $("month").value, day: $("day").value, yearStart: $("yearStart").value } : null,
@@ -159,6 +173,7 @@
     $("desc").value = x.description || "";
     $("tags").value = (x.tags || []).join(", ");
     $("tagMode").value = x.tagMode || "any";
+    $("privacy").value = String(x.privacy || "");
     $("from").value = (x.taken && x.taken.from) || "";
     $("to").value = (x.taken && x.taken.to) || "";
     $("sort").value = String(x.sortCode ?? 0);
