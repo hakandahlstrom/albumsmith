@@ -17,7 +17,7 @@
 <details class="how">
   <summary>How this page works</summary>
   <p>Each rule describes one album on Flickr: which photos belong in it (by tags, dates or "on this day") and in what order. Click a title to edit the rule.</p>
-  <p>With <b>Auto</b> ticked, Albumsmith updates the album once a night. <b>Sync now</b> updates one album straight away. It is only available for rules with Auto ticked.</p>
+  <p>With <b>Auto</b> ticked, Albumsmith updates the album once a night. <b>Sync now</b> updates one album straight away, whether Auto is ticked or not, so you can also create or refresh an album just once.</p>
   <p><b>Last run</b> shows how many photos the rule found and whether the album was changed.</p>
   <p>As a safety net, a nightly run will not remove more than 10% of an album's photos in one go (or more than 5 photos from a small album). A rule that would is skipped and listed under Status, since Flickr's search is sometimes incomplete. <b>Sync now</b> skips that check, because you are looking at the result yourself.</p>
   <p>Use <b>Check all</b> to compare every rule with Flickr before you turn auto-sync on.</p>
@@ -90,15 +90,15 @@
     const last = cell(lastText(r.last, Boolean(r.setId)));
     const btn = document.createElement("button");
     btn.textContent = "Sync now";
-    btn.disabled = !r.autoSync;
     btn.addEventListener("click", async () => {
+      if (!r.autoSync && r.setId && !confirm("Sync " + r.title + " now?\n\nThe album on Flickr will be updated to match the rule. Make sure no other tool is managing this album, or the two will overwrite each other.")) return;
       btn.disabled = true;
       last.textContent = "Syncing...";
       const res = await post("/api/rules/" + encodeURIComponent(r.key) + "/sync");
       const out = await res.json().catch(() => ({}));
       const x = out.results && out.results[0];
       last.textContent = out.error ? "error: " + out.error : x ? lastText(x, Boolean(r.setId)) : "nothing to do";
-      btn.disabled = !r.autoSync;
+      btn.disabled = false;
     });
     const act = document.createElement("td");
     act.append(btn);

@@ -542,7 +542,7 @@ async function runAll(trigger, onlyKey) {
     }
     const sess = { user: token };
     const rules = loadRules();
-    for (const rule of rules.filter((r) => r.autoSync && (!onlyKey || (r.id || r.uid) === onlyKey))) {
+    for (const rule of rules.filter((r) => (onlyKey ? (r.id || r.uid) === onlyKey : r.autoSync))) {
       try {
         const current = rule.id ? await setIds(sess, rule.id) : [];
         let found = onlyKey ? await ruleIds(sess, rule) : await ruleIdsStable(sess, rule, current);
