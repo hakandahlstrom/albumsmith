@@ -91,6 +91,11 @@
     <p class="note">The order of the photos in the album. An album holds at most 4500 photos. If more match, "newest first" keeps the newest 4500.</p>
   </div>
 
+  <div class="field" id="autoWrap">
+    <label class="check"><input id="autoSync" type="checkbox"> Auto-sync</label>
+    <p class="note">Updates the album automatically once a night. The album is created on Flickr at the first sync. You can change this later on the Rules page.</p>
+  </div>
+
   <div class="actions">
     <button id="save" type="button" class="primary">Save</button>
     <button id="prev" type="button" title="Ask Flickr how many photos this rule matches">Count matching photos</button>
@@ -129,6 +134,7 @@
       takenTo: on ? "" : $("to").value,
       onThisDay: on ? { month: $("month").value, day: $("day").value, yearStart: $("yearStart").value } : null,
       sortCode: $("sort").value,
+      ...(key ? {} : { autoSync: $("autoSync").checked }),
     };
   }
 
@@ -164,6 +170,7 @@
   async function load() {
     if (!key) return;
     $("h").textContent = "Edit rule";
+    $("autoWrap").hidden = true;
     $("del").hidden = false;
     const r = await fetch("/api/rules/" + encodeURIComponent(key));
     if (r.status === 401) { location.href = "/"; return; }

@@ -825,7 +825,7 @@ app.post("/api/rules", requireAuth, requireJson, (req, res) => {
   const n = normRule(req.body || {});
   if (n.error) return res.status(400).json({ error: n.error });
   const rules = loadRules();
-  const rule = { ...n.rule, uid: crypto.randomUUID(), autoSync: false };
+  const rule = { ...n.rule, uid: crypto.randomUUID(), autoSync: (req.body || {}).autoSync === true };
   rules.push(rule);
   saveRules(rules);
   res.json({ key: rule.uid });
