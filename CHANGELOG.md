@@ -3,6 +3,20 @@
 All notable changes to Albumsmith are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-11-17
+
+### Added
+
+- Auto-sync can be switched on when a rule is created, so you no longer need to open the Rules page afterwards.
+
+### Changed
+
+- **Sync now** works for every rule, whether Auto is ticked or not, so an album can be created or refreshed just once. The nightly run still only handles rules with Auto ticked. If the rule already has an album and Auto is off, Sync now asks for confirmation first.
+
+### Fixed
+
+- After a rule got its album from Sync now, pressing Sync now again without reloading the page found no rule and showed "nothing to do". Rules are now found by either their album id or their internal id.
+
 ## [1.1.0] - 2026-11-14
 
 ### Added
