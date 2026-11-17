@@ -99,6 +99,11 @@
       const x = out.results && out.results[0];
       last.textContent = out.error ? "error: " + out.error : x ? lastText(x, Boolean(r.setId)) : "nothing to do";
       btn.disabled = false;
+      try {
+        const fresh = await (await fetch("/api/rules")).json();
+        const f = fresh.rules.find((z) => z.title === r.title);
+        if (f) { r.key = f.key; r.setId = f.setId; }
+      } catch (e) {}
     });
     const act = document.createElement("td");
     act.append(btn);

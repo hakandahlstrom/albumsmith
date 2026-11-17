@@ -542,7 +542,7 @@ async function runAll(trigger, onlyKey) {
     }
     const sess = { user: token };
     const rules = loadRules();
-    for (const rule of rules.filter((r) => (onlyKey ? (r.id || r.uid) === onlyKey : r.autoSync))) {
+    for (const rule of rules.filter((r) => (onlyKey ? hasKey(r, onlyKey) : r.autoSync))) {
       try {
         const current = rule.id ? await setIds(sess, rule.id) : [];
         let found = onlyKey ? await ruleIds(sess, rule) : await ruleIdsStable(sess, rule, current);
@@ -622,6 +622,7 @@ setInterval(() => {
 app.use(express.json({ limit: "2mb" }));
 
 const keyOf = (r) => r.id || r.uid;
+const hasKey = (r, k) => r.id === k || r.uid === k;
 const requireJson = (req, res, next) =>
   req.is("application/json") ? next() : res.status(415).json({ error: "JSON required" });
 
@@ -668,7 +669,7 @@ app.get("/api/rules", requireAuth, (req, res) => {
 
 app.post("/api/rules/:key/autosync", requireAuth, requireJson, (req, res) => {
   const rules = loadRules();
-  const rule = rules.find((r) => keyOf(r) === req.params.key);
+  const rule = rules.find((r) => hasKey(r, req.params.key));
   if (!rule) return res.status(404).json({ error: "No such rule" });
   rule.autoSync = Boolean(req.body && req.body.enabled);
   saveRules(rules);
@@ -805,7 +806,7 @@ app.get("/rule", (req, res) => {
 });
 
 app.get("/api/rules/:key", requireAuth, (req, res) => {
-  const rule = loadRules().find((r) => keyOf(r) === req.params.key);
+  const rule = loadRules().find((r) => hasKey(r, req.params.key));
   if (!rule) return res.status(404).json({ error: "No such rule" });
   res.json(rule);
 });
@@ -835,7 +836,7 @@ app.put("/api/rules/:key", requireAuth, requireJson, (req, res) => {
   const n = normRule(req.body || {});
   if (n.error) return res.status(400).json({ error: n.error });
   const rules = loadRules();
-  const i = rules.findIndex((r) => keyOf(r) === req.params.key);
+  const i = rules.findIndex((r) => hasKey(r, req.params.key));
   if (i < 0) return res.status(404).json({ error: "No such rule" });
   rules[i] = { ...rules[i], ...n.rule };
   saveRules(rules);
@@ -844,7 +845,7 @@ app.put("/api/rules/:key", requireAuth, requireJson, (req, res) => {
 
 app.delete("/api/rules/:key", requireAuth, requireJson, (req, res) => {
   const rules = loadRules();
-  const i = rules.findIndex((r) => keyOf(r) === req.params.key);
+  const i = rules.findIndex((r) => hasKey(r, req.params.key));
   if (i < 0) return res.status(404).json({ error: "No such rule" });
   const [gone] = rules.splice(i, 1);
   saveRules(rules, true);
@@ -1001,7 +1002,7 @@ app.post("/api/rules/autosync-bulk", requireAuth, requireJson, (req, res) => {
 });
 
 app.get("/diff", requireAuth, async (req, res) => {
-  const rule = loadRules().find((r) => keyOf(r) === req.query.key);
+  const rule = loadRules().find((r) => hasKey(r, req.query.key));
   if (!rule || !rule.id) return res.status(404).type("text/plain").send("No such rule");
   const found = await ruleIds(req.session, rule);
   const current = await setIds(req.session, rule.id);
